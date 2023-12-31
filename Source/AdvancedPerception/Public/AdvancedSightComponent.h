@@ -23,9 +23,15 @@ public:
 		FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UAdvancedSightData* GetSightData() const { return SightData; }
+	UAdvancedSightData* GetSightData() const;
 	FTransform GetEyePointOfViewTransform() const;
 	AActor* GetBodyActor() const;
+	TSet<TObjectPtr<AActor>> GetPerceivedTargets() const;
+	bool IsTargetPerceived(const AActor* TargetActor) const;
+
+	void SpotTarget(AActor* TargetActor);
+	void PerceiveTarget(AActor* TargetActor);
+	void LoseTarget(AActor* TargetActor);
 
 	UPROPERTY(BlueprintAssignable)
 	FAdvancedSightComponentDelegate OnTargetSpotted;
@@ -40,4 +46,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<UAdvancedSightData> SightData;
+
+	UPROPERTY(Transient)
+	TSet<TObjectPtr<AActor>> PerceivedTargets;
 };

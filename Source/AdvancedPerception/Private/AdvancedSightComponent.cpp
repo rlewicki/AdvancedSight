@@ -30,6 +30,33 @@ AActor* UAdvancedSightComponent::GetBodyActor() const
 	return GetOwner();
 }
 
+void UAdvancedSightComponent::SpotTarget(AActor* TargetActor)
+{
+	OnTargetSpotted.Broadcast(TargetActor);
+}
+
+void UAdvancedSightComponent::PerceiveTarget(AActor* TargetActor)
+{
+	PerceivedTargets.Add(TargetActor);
+	OnTargetPerceived.Broadcast(TargetActor);
+}
+
+void UAdvancedSightComponent::LoseTarget(AActor* TargetActor)
+{
+	PerceivedTargets.Remove(TargetActor);
+	OnTargetLost.Broadcast(TargetActor);
+}
+
+TSet<TObjectPtr<AActor>> UAdvancedSightComponent::GetPerceivedTargets() const
+{
+	return PerceivedTargets;
+}
+
+bool UAdvancedSightComponent::IsTargetPerceived(const AActor* TargetActor) const
+{
+	return PerceivedTargets.Contains(TargetActor);
+}
+
 void UAdvancedSightComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -52,6 +79,11 @@ void UAdvancedSightComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	
 	Super::EndPlay(EndPlayReason);
+}
+
+UAdvancedSightData* UAdvancedSightComponent::GetSightData() const
+{
+	return SightData;
 }
 
 void UAdvancedSightComponent::TickComponent(

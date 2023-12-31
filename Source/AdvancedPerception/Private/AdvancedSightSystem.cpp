@@ -71,7 +71,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 
 	for (FAdvancedSightQuery& Query : Queries)
 	{
-		const UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
+		UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
 		const FTransform ListenerTransform = SightComponent->GetEyePointOfViewTransform();
 		AActor* TargetActor = TargetActors[Query.TargetId].Get();
 		const FVector TargetLocation = TargetActor->GetActorLocation();
@@ -125,7 +125,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 			if (!Query.bWasLastCheckSuccess)
 			{
 				Query.bWasLastCheckSuccess = true;
-				SightComponent->OnTargetSpotted.Broadcast(TargetActor);
+				SightComponent->SpotTarget(TargetActor);
 			}
 
 			Query.LastSeenLocation = TargetLocation;
@@ -135,7 +135,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 				if (Query.GainValue > 1.0f)
 				{
 					Query.bIsTargetPerceived = true;
-					SightComponent->OnTargetPerceived.Broadcast(TargetActor);
+					SightComponent->PerceiveTarget(TargetActor);
 				}
 			}
 			else
@@ -153,7 +153,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 				if (Query.LoseSightTimer >= Query.LoseSightCooldown)
 				{
 					Query.bIsTargetPerceived = false;
-					SightComponent->OnTargetLost.Broadcast(TargetActor);
+					SightComponent->LoseTarget(TargetActor);
 				}
 			}
 			else
