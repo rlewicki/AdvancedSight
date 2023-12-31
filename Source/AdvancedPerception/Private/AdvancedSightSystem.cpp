@@ -181,6 +181,11 @@ void UAdvancedSightSystem::HandleNewActorSpawned(AActor* Actor)
 void UAdvancedSightSystem::AddQuery(
 	const UAdvancedSightComponent* SightComponent, const AActor* TargetActor, const UAdvancedSightData* SightData)
 {
+	if (!SightData)
+	{
+		return;
+	}
+	
 	if (SightComponent->GetOwner() ==  TargetActor)
 	{
 		return;
