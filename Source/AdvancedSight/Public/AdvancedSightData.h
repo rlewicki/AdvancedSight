@@ -15,9 +15,6 @@ struct ADVANCEDSIGHT_API FAdvancedSightInfo
 	float GainRadius = 1000.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	float LoseRadius = 1250.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float FOV = 90.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -35,6 +32,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<FAdvancedSightInfo> SightInfos;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float LoseSightRadius = 1250.0f;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float LoseSightCooldown = 1.0f;
 };

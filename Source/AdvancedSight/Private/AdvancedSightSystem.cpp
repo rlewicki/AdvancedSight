@@ -5,6 +5,10 @@
 #include "AdvancedSightComponent.h"
 #include "AdvancedSightData.h"
 #include "AdvancedSightTarget.h"
+#include "Kismet/GameplayStatics.h"
+
+static TAutoConsoleVariable<bool> ShouldDebugDraw(
+	TEXT("AdvancedSight.ShouldDebugDraw"), false, TEXT("Set this to true to see the closest listener debug drawing"));
 
 void UAdvancedSightSystem::RegisterListener(UAdvancedSightComponent* SightComponent)
 {
@@ -52,8 +56,12 @@ void UAdvancedSightSystem::PostInitProperties()
 	if (!HasAnyFlags(RF_ClassDefaultObject))
 	{
 		const UWorld* World = GetWorld();
-		const FOnActorSpawned::FDelegate ActorSpawnedDelegate = FOnActorSpawned::FDelegate::CreateUObject(this, &ThisClass::HandleNewActorSpawned);
+		const FOnActorSpawned::FDelegate ActorSpawnedDelegate =
+			FOnActorSpawned::FDelegate::CreateUObject(this, &ThisClass::HandleNewActorSpawned);
 		NewActorSpawnedDelegateHandle = World->AddOnActorSpawnedHandler(ActorSpawnedDelegate);
+
+		ShouldDebugDraw.AsVariable()->SetOnChangedCallback(
+			FConsoleVariableDelegate::CreateUObject(this, &ThisClass::OnDebugDrawStateChanged));
 	}
 }
 
@@ -81,7 +89,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		{
 			const float CheckRadiusSq = FMath::Square(
 				Query.bIsTargetPerceived
-				? SightInfo.LoseRadius
+				? Query.LoseSightRadius
 				: SightInfo.GainRadius);
 			const float DistanceSq = FVector::DistSquared(ListenerTransform.GetLocation(), TargetLocation);
 			if (DistanceSq > CheckRadiusSq)
@@ -166,6 +174,11 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 			}
 		}
 	}
+
+	if (bShouldDebugDraw && DebugListener.IsValid())
+	{
+		DrawDebug(DebugListener.Get());
+	}
 }
 
 TStatId UAdvancedSightSystem::GetStatId() const
@@ -195,5 +208,90 @@ void UAdvancedSightSystem::AddQuery(
 	Query.ListenerId = SightComponent->GetUniqueID();
 	Query.TargetId = TargetActor->GetUniqueID();
 	Query.SightInfos = SightData->SightInfos;
+	Query.LoseSightRadius = SightData->LoseSightRadius;
 	Query.LoseSightCooldown = SightData->LoseSightCooldown;
+}
+
+void UAdvancedSightSystem::OnDebugDrawStateChanged(IConsoleVariable* ConsoleVariable)
+{
+	if (ConsoleVariable->GetBool())
+	{
+		const APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
+		if (!PC)
+		{
+			return;
+		}
+
+		const APawn* Pawn = PC->GetPawn();
+		if (!Pawn)
+		{
+			return;
+		}
+
+		const FVector LocalPawnLocation = Pawn->GetActorLocation();
+		float MinDistance = MAX_flt;
+		DebugListener = nullptr;
+		for (const TTuple<uint32, TWeakObjectPtr<UAdvancedSightComponent>>& Listener : Listeners)
+		{
+			const AActor* BodyActor = Listener.Value->GetBodyActor();
+			const FVector ListenerLocation = BodyActor->GetActorLocation();
+			const float DistanceSq = FVector::DistSquared(LocalPawnLocation, ListenerLocation);
+			if (DistanceSq < MinDistance)
+			{
+				MinDistance = DistanceSq;
+				DebugListener = Listener.Value.Get();
+			}
+		}
+
+		if (DebugListener.IsValid())
+		{
+			bShouldDebugDraw = true;
+		}
+	}
+	else
+	{
+		bShouldDebugDraw = false;
+		DebugListener = nullptr;
+	}
+}
+
+void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightComponent) const
+{
+	const UAdvancedSightData* SightData = SightComponent->GetSightData();
+	if (!SightData)
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+	const FVector CenterLocation = SightComponent->GetBodyActor()->GetActorLocation();
+	const FVector ForwardVector = SightComponent->GetBodyActor()->GetActorForwardVector();
+	for (const FAdvancedSightInfo& SightInfo : SightData->SightInfos)
+	{
+		const FVector LeftForward = ForwardVector.RotateAngleAxis(-SightInfo.FOV / 2.0f, FVector::UpVector);
+		const FVector RightForward = ForwardVector.RotateAngleAxis(SightInfo.FOV / 2.0f, FVector::UpVector);
+		const FVector LeftCenterCorner = CenterLocation + LeftForward * SightInfo.GainRadius;
+		const FVector RightCenterCorner = CenterLocation + RightForward * SightInfo.GainRadius;
+		DrawDebugLine(World, CenterLocation, LeftCenterCorner, SightInfo.DebugColor);
+		DrawDebugLine(World, CenterLocation, RightCenterCorner, SightInfo.DebugColor);
+		DrawDebugCircleArc(
+			World,
+			CenterLocation,
+			SightInfo.GainRadius,
+			ForwardVector,
+			FMath::DegreesToRadians(SightInfo.FOV / 2.0f),
+			static_cast<int32>(SightInfo.FOV / 10.0f),
+			SightInfo.DebugColor);
+	}
+	
+	const FTransform LoseSightTransform(FQuat(FRotator(90.0, 0.0, 0.0)), CenterLocation);
+	DrawDebugCircle(World, LoseSightTransform.ToMatrixNoScale(), SightData->LoseSightRadius, 24, FColor::Black);
+
+	const TSet<TObjectPtr<AActor>>& PerceivedTargets = SightComponent->GetPerceivedTargets();
+	for (const AActor* PerceivedTarget : PerceivedTargets)
+	{
+		const FVector TargetLocation = PerceivedTarget->GetActorLocation();
+		DrawDebugLine(World, CenterLocation, TargetLocation, FColor::Green);
+		DrawDebugSphere(World, TargetLocation, 32.0f, 12, FColor::Green);
+	}
 }

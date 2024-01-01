@@ -21,6 +21,7 @@ struct FAdvancedSightQuery
 	float LoseSightTimer = 0.0f;
 	float LoseSightCooldown = 1.0f;
 	float GainValue = 0.0f;
+	float LoseSightRadius = -1.0f;
 	TArray<FAdvancedSightInfo> SightInfos;
 };
 
@@ -42,9 +43,15 @@ protected:
 	void AddQuery(
 		const UAdvancedSightComponent* SightComponent, const AActor* TargetActor, const UAdvancedSightData* SightData);
 
+	void OnDebugDrawStateChanged(IConsoleVariable* ConsoleVariable);
+
 	FDelegateHandle NewActorSpawnedDelegateHandle;
 
 	TMap<uint32, TWeakObjectPtr<AActor>> TargetActors;
 	TMap<uint32, TWeakObjectPtr<UAdvancedSightComponent>> Listeners;
 	TArray<FAdvancedSightQuery> Queries;
+
+	bool bShouldDebugDraw = false;
+	TWeakObjectPtr<const UAdvancedSightComponent> DebugListener;
+	void DrawDebug(const UAdvancedSightComponent* SightComponent) const;
 };
