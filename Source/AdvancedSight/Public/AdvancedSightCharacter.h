@@ -1,4 +1,4 @@
-﻿// Copyright 2023, Robert Lewicki, All rights reserved.
+﻿// Copyright 2024, Robert Lewicki, All rights reserved.
 
 #pragma once
 
