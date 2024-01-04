@@ -219,6 +219,21 @@ void UAdvancedSightSystem::AddQuery(
 		return;
 	}
 
+	if (SightComponent->GetBodyActor()->Implements<UGenericTeamAgentInterface>()
+		&& TargetActor->Implements<UGenericTeamAgentInterface>())
+	{
+		const auto* ListenerTeamAgent = Cast<IGenericTeamAgentInterface>(SightComponent->GetBodyActor());
+		const auto* TargetTeamAgent = Cast<IGenericTeamAgentInterface>(TargetActor);
+		const bool bShouldSense = FAISenseAffiliationFilter::ShouldSenseTeam(
+			ListenerTeamAgent->GetGenericTeamId(),
+			TargetTeamAgent->GetGenericTeamId(),
+			SightData->DetectionByAffiliation.GetAsFlags());
+		if (!bShouldSense)
+		{
+			return;
+		}
+	}
+
 	FAdvancedSightQuery& Query = Queries.AddDefaulted_GetRef();
 	Query.ListenerId = SightComponent->GetUniqueID();
 	Query.TargetId = TargetActor->GetUniqueID();

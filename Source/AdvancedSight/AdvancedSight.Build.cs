@@ -25,7 +25,8 @@ public class AdvancedSight : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"AIModule",
 			}
 		);
 	}

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Perception/AIPerceptionTypes.h"
 #include "AdvancedSightData.generated.h"
 
 USTRUCT(BlueprintType)
@@ -37,4 +38,7 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	float LoseSightCooldown = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FAISenseAffiliationFilter DetectionByAffiliation;
 };
