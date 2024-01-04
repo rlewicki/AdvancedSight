@@ -3,6 +3,7 @@
 
 #include "AdvancedSightComponent.h"
 
+#include "AdvancedSightCommon.h"
 #include "AdvancedSightSystem.h"
 
 UAdvancedSightComponent::UAdvancedSightComponent()
@@ -32,11 +33,13 @@ AActor* UAdvancedSightComponent::GetBodyActor() const
 
 void UAdvancedSightComponent::SpotTarget(AActor* TargetActor)
 {
+	SpottedTargets.Add(TargetActor);
 	OnTargetSpotted.Broadcast(TargetActor);
 }
 
 void UAdvancedSightComponent::PerceiveTarget(AActor* TargetActor)
 {
+	SpottedTargets.Remove(TargetActor);
 	PerceivedTargets.Add(TargetActor);
 	OnTargetPerceived.Broadcast(TargetActor);
 }
@@ -47,9 +50,14 @@ void UAdvancedSightComponent::LoseTarget(AActor* TargetActor)
 	OnTargetLost.Broadcast(TargetActor);
 }
 
-TSet<TObjectPtr<AActor>> UAdvancedSightComponent::GetPerceivedTargets() const
+TArray<AActor*> UAdvancedSightComponent::GetPerceivedTargets() const
 {
 	return PerceivedTargets;
+}
+
+TArray<AActor*> UAdvancedSightComponent::GetSpottedTargets() const
+{
+	return SpottedTargets;
 }
 
 bool UAdvancedSightComponent::IsTargetPerceived(const AActor* TargetActor) const
@@ -57,11 +65,28 @@ bool UAdvancedSightComponent::IsTargetPerceived(const AActor* TargetActor) const
 	return PerceivedTargets.Contains(TargetActor);
 }
 
+float UAdvancedSightComponent::GetGainValueForTarget(const AActor* TargetActor) const
+{
+	if (!TargetActor)
+	{
+		UE_LOG(
+			LogAdvancedSight,
+			Warning,
+			TEXT("%s: Invalid target actor reference"), StringCast<TCHAR>(__FUNCTION__).Get());
+		return -1.0f;
+	}
+
+	const float GainValue =
+			AdvancedSightSystem->GetGainValueForTarget(GetUniqueID(), TargetActor->GetUniqueID());
+	return GainValue;
+}
+
 void UAdvancedSightComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (auto* AdvancedSightSystem = GetWorld()->GetSubsystem<UAdvancedSightSystem>())
+	AdvancedSightSystem = GetWorld()->GetSubsystem<UAdvancedSightSystem>();
+	if (ensureMsgf(AdvancedSightSystem.IsValid(), TEXT("Advanced sight system reference is invalid")))
 	{
 		AdvancedSightSystem->RegisterListener(this);
 	}
@@ -70,14 +95,11 @@ void UAdvancedSightComponent::BeginPlay()
 
 void UAdvancedSightComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (const UWorld* World = GetWorld())
+	if (AdvancedSightSystem.IsValid())
 	{
-		if (auto* AdvancedSightSystem = World->GetSubsystem<UAdvancedSightSystem>())
-		{
-			AdvancedSightSystem->UnregisterListener(this);
-		}
+		AdvancedSightSystem->UnregisterListener(this);
 	}
-	
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -92,6 +114,4 @@ void UAdvancedSightComponent::TickComponent(
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	
 }

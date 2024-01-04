@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "AdvancedSightComponent.generated.h"
 
+class UAdvancedSightSystem;
 class UAdvancedSightData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAdvancedSightComponentDelegate, AActor*, TargetActor);
@@ -26,8 +27,16 @@ public:
 	UAdvancedSightData* GetSightData() const;
 	FTransform GetEyePointOfViewTransform() const;
 	AActor* GetBodyActor() const;
-	TSet<TObjectPtr<AActor>> GetPerceivedTargets() const;
 	bool IsTargetPerceived(const AActor* TargetActor) const;
+
+	UFUNCTION(BlueprintPure)
+	float GetGainValueForTarget(const AActor* TargetActor) const;
+
+	UFUNCTION(BlueprintCallable)
+	TArray<AActor*> GetPerceivedTargets() const;
+
+	UFUNCTION(BlueprintCallable)
+	TArray<AActor*> GetSpottedTargets() const;
 
 	void SpotTarget(AActor* TargetActor);
 	void PerceiveTarget(AActor* TargetActor);
@@ -48,5 +57,10 @@ protected:
 	TObjectPtr<UAdvancedSightData> SightData;
 
 	UPROPERTY(Transient)
-	TSet<TObjectPtr<AActor>> PerceivedTargets;
+	TArray<TObjectPtr<AActor>> PerceivedTargets;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> SpottedTargets;
+
+	TWeakObjectPtr<UAdvancedSightSystem> AdvancedSightSystem;
 };

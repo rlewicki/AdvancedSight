@@ -49,6 +49,21 @@ void UAdvancedSightSystem::UnregisterTarget(AActor* TargetActor)
 	});
 }
 
+float UAdvancedSightSystem::GetGainValueForTarget(const uint32 ListenerId, const uint32 TargetId) const
+{
+	const FAdvancedSightQuery* Query = Queries.FindByPredicate([ListenerId, TargetId](const FAdvancedSightQuery& Query)
+	{
+		return Query.ListenerId == ListenerId && Query.TargetId == TargetId;
+	});
+
+	if (!Query)
+	{
+		return -1.0f;
+	}
+
+	return Query->GainValue;
+}
+
 void UAdvancedSightSystem::PostInitProperties()
 {
 	Super::PostInitProperties();
@@ -287,7 +302,7 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 	const FTransform LoseSightTransform(FQuat(FRotator(90.0, 0.0, 0.0)), CenterLocation);
 	DrawDebugCircle(World, LoseSightTransform.ToMatrixNoScale(), SightData->LoseSightRadius, 24, FColor::Black);
 
-	const TSet<TObjectPtr<AActor>>& PerceivedTargets = SightComponent->GetPerceivedTargets();
+	const TArray<AActor*>& PerceivedTargets = SightComponent->GetPerceivedTargets();
 	for (const AActor* PerceivedTarget : PerceivedTargets)
 	{
 		const FVector TargetLocation = PerceivedTarget->GetActorLocation();

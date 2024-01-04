@@ -34,6 +34,7 @@ public:
 	void UnregisterListener(UAdvancedSightComponent* SightComponent);
 	void RegisterTarget(AActor* TargetActor);
 	void UnregisterTarget(AActor* TargetActor);
+	float GetGainValueForTarget(const uint32 Listener, const uint32 TargetId) const;
 
 	virtual void PostInitProperties() override;
 	virtual void Tick(float DeltaTime) override;
