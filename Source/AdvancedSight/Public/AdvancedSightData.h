@@ -21,7 +21,7 @@ struct ADVANCEDSIGHT_API FAdvancedSightInfo
 	float GainMultiplier = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, AdvancedDisplay)
-	FColor DebugColor;
+	FColor DebugColor = FColor::Green;
 };
 
 UCLASS()
