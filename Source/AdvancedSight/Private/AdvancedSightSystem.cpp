@@ -98,7 +98,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		AActor* TargetActor = TargetActors[Query.TargetId].Get();
 		const FVector TargetLocation = TargetActor->GetActorLocation();
 		bool bIsVisible = false;
-		float BestGainMultiplier = 0.0f;
+		float GainMultiplier = 0.0f;
 		if (Query.bIsTargetPerceived)
 		{
 			bIsVisible = IsVisibleInsideCone(SightComponent, TargetActor, Query.LoseSightRadius, 360.0f);
@@ -107,7 +107,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		{
 			for (const FAdvancedSightInfo& SightInfo : Query.SightInfos)
 			{
-				constexpr float EPSILON = 5.0f;
+				constexpr float EPSILON = 1.0f;
 				const float Radius =
 					Query.bWasLastCheckSuccess ? SightInfo.GainRadius + EPSILON : SightInfo.GainRadius;
 				const bool bIsVisibleInsideCone =
@@ -115,10 +115,8 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 				if (bIsVisibleInsideCone)
 				{
 					bIsVisible = true;
-					if (SightInfo.GainMultiplier > BestGainMultiplier)
-					{
-						BestGainMultiplier = SightInfo.GainMultiplier;
-					}
+					GainMultiplier = SightInfo.GainMultiplier;
+					break;
 				}
 			}	
 		}
@@ -135,7 +133,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 			Query.LastSeenLocation = TargetLocation;
 			if (!Query.bIsTargetPerceived)
 			{
-				Query.GainValue += DeltaTime * BestGainMultiplier;
+				Query.GainValue += DeltaTime * GainMultiplier;
 				if (Query.GainValue > 1.0f)
 				{
 					Query.bIsTargetPerceived = true;
@@ -223,7 +221,12 @@ void UAdvancedSightSystem::AddQuery(
 	FAdvancedSightQuery& Query = Queries.AddDefaulted_GetRef();
 	Query.ListenerId = SightComponent->GetUniqueID();
 	Query.TargetId = TargetActor->GetUniqueID();
-	Query.SightInfos = SightData->SightInfos;
+	TArray<FAdvancedSightInfo> SortedSightInfos = SightData->SightInfos;
+	SortedSightInfos.Sort([](const FAdvancedSightInfo& Lhs, const FAdvancedSightInfo& Rhs)
+	{
+		return Lhs.GainRadius < Rhs.GainRadius;
+	});
+	Query.SightInfos = MoveTemp(SortedSightInfos);
 	Query.LoseSightRadius = SightData->LoseSightRadius;
 	Query.LoseSightCooldown = SightData->LoseSightCooldown;
 }
