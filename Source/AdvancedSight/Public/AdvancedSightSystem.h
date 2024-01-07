@@ -43,6 +43,11 @@ protected:
 	void HandleNewActorSpawned(AActor* Actor);
 	void AddQuery(
 		const UAdvancedSightComponent* SightComponent, const AActor* TargetActor, const UAdvancedSightData* SightData);
+	static bool IsVisibleInsideCone(
+		const UAdvancedSightComponent* SourceComponent,
+		const AActor* TargetActor,
+		const float Radius,
+		const float FOV);
 
 	void OnDebugDrawStateChanged(IConsoleVariable* ConsoleVariable);
 

@@ -38,25 +38,45 @@ void UAdvancedSightComponent::SpotTarget(AActor* TargetActor)
 
 void UAdvancedSightComponent::PerceiveTarget(AActor* TargetActor)
 {
-	SpottedTargets.Remove(TargetActor);
+	SpottedTargets.RemoveSwap(TargetActor);
 	PerceivedTargets.Add(TargetActor);
 	OnTargetPerceived.Broadcast(TargetActor);
 }
 
 void UAdvancedSightComponent::LoseTarget(AActor* TargetActor)
 {
-	PerceivedTargets.Remove(TargetActor);
+	const int32 RemovedNum = PerceivedTargets.RemoveSwap(TargetActor);
+	if (RemovedNum == 0)
+	{
+		SpottedTargets.RemoveSwap(TargetActor);	
+	}
+	else
+	{
+		RememberedTargets.Add(TargetActor);
+	}
+	
 	OnTargetLost.Broadcast(TargetActor);
 }
 
-TArray<AActor*> UAdvancedSightComponent::GetPerceivedTargets() const
+void UAdvancedSightComponent::ForgetTarget(AActor* TargetActor)
+{
+	RememberedTargets.RemoveSwap(TargetActor);
+	OnTargetForgot.Broadcast(TargetActor);
+}
+
+const TArray<AActor*>& UAdvancedSightComponent::GetPerceivedTargets() const
 {
 	return PerceivedTargets;
 }
 
-TArray<AActor*> UAdvancedSightComponent::GetSpottedTargets() const
+const TArray<AActor*>& UAdvancedSightComponent::GetSpottedTargets() const
 {
 	return SpottedTargets;
+}
+
+const TArray<AActor*>& UAdvancedSightComponent::GetRememberedTargets() const
+{
+	return RememberedTargets;
 }
 
 bool UAdvancedSightComponent::IsTargetPerceived(const AActor* TargetActor) const

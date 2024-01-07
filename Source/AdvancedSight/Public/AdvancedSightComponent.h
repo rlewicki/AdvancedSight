@@ -33,14 +33,18 @@ public:
 	float GetGainValueForTarget(const AActor* TargetActor) const;
 
 	UFUNCTION(BlueprintCallable)
-	TArray<AActor*> GetPerceivedTargets() const;
+	const TArray<AActor*>& GetPerceivedTargets() const;
 
 	UFUNCTION(BlueprintCallable)
-	TArray<AActor*> GetSpottedTargets() const;
+	const TArray<AActor*>& GetSpottedTargets() const;
+
+	UFUNCTION(BlueprintCallable)
+	const TArray<AActor*>& GetRememberedTargets() const;
 
 	void SpotTarget(AActor* TargetActor);
 	void PerceiveTarget(AActor* TargetActor);
 	void LoseTarget(AActor* TargetActor);
+	void ForgetTarget(AActor* TargetActor);
 
 	UPROPERTY(BlueprintAssignable)
 	FAdvancedSightComponentDelegate OnTargetSpotted;
@@ -50,6 +54,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FAdvancedSightComponentDelegate OnTargetLost;
+
+	UPROPERTY(BlueprintAssignable)
+	FAdvancedSightComponentDelegate OnTargetForgot;
 protected:
 	virtual void BeginPlay() override;
 
@@ -61,6 +68,9 @@ protected:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AActor>> SpottedTargets;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AActor>> RememberedTargets;
 
 	TWeakObjectPtr<UAdvancedSightSystem> AdvancedSightSystem;
 };
