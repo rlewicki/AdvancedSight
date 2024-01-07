@@ -107,8 +107,11 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		{
 			for (const FAdvancedSightInfo& SightInfo : Query.SightInfos)
 			{
+				constexpr float EPSILON = 5.0f;
+				const float Radius =
+					Query.bWasLastCheckSuccess ? SightInfo.GainRadius + EPSILON : SightInfo.GainRadius;
 				const bool bIsVisibleInsideCone =
-					IsVisibleInsideCone(SightComponent, TargetActor, SightInfo.GainRadius, SightInfo.FOV);
+					IsVisibleInsideCone(SightComponent, TargetActor, Radius, SightInfo.FOV);
 				if (bIsVisibleInsideCone)
 				{
 					bIsVisible = true;
@@ -260,12 +263,7 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 		TargetLocation,
 		ECC_Visibility,
 		QueryParams);
-	if (!bHit)
-	{
-		return false;
-	}
-
-	if (HitResult.GetActor() != TargetActor)
+	if (bHit && HitResult.GetActor() != TargetActor)
 	{
 		return false;
 	}
