@@ -86,7 +86,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 
 	TRACE_CPUPROFILER_EVENT_SCOPE_STR("UAdvancedSightSystem::Tick");
 
-	UWorld* World = GetWorld();
+	const UWorld* World = GetWorld();
 	if (!World)
 	{
 		return;
@@ -96,7 +96,6 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 	{
 		UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
 		AActor* TargetActor = TargetActors[Query.TargetId].Get();
-		const FVector TargetLocation = TargetActor->GetActorLocation();
 		bool bIsVisible = false;
 		float GainMultiplier = 0.0f;
 		if (Query.bIsTargetPerceived)
@@ -130,7 +129,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 				SightComponent->SpotTarget(TargetActor);
 			}
 
-			Query.LastSeenLocation = TargetLocation;
+			Query.LastSeenLocation = TargetActor->GetActorLocation();
 			if (!Query.bIsTargetPerceived)
 			{
 				Query.GainValue += DeltaTime * GainMultiplier;
@@ -198,7 +197,7 @@ void UAdvancedSightSystem::AddQuery(
 		return;
 	}
 	
-	if (SightComponent->GetOwner() ==  TargetActor)
+	if (SightComponent->GetOwner() == TargetActor)
 	{
 		return;
 	}
@@ -237,41 +236,47 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 	const float Radius,
 	const float FOV)
 {
-	const FTransform SourceTransform = SourceComponent->GetEyePointOfViewTransform();
-	const FVector TargetLocation = TargetActor->GetActorLocation();
 	const float CheckRadiusSq = FMath::Square(Radius);
-	const float DistanceSq = FVector::DistSquared(SourceTransform.GetLocation(), TargetLocation);
-	if (DistanceSq > CheckRadiusSq)
+	const FTransform SourceTransform = SourceComponent->GetEyePointOfViewTransform();
+	const FVector SourceForward = SourceTransform.GetRotation().Vector();
+	TArray<FVector> VisibilityPoints;
+	IAdvancedSightTarget::Execute_GetVisibilityPoints(TargetActor, VisibilityPoints);
+	for (const FVector& VisibilityPointLocation : VisibilityPoints)
 	{
-		return false;
+		const float DistanceSq = FVector::DistSquared(SourceTransform.GetLocation(), VisibilityPointLocation);
+		if (DistanceSq > CheckRadiusSq)
+		{
+			continue;
+		}
+
+		const FVector DirectionToTarget = (VisibilityPointLocation - SourceTransform.GetLocation()).GetSafeNormal();
+		const float DotProduct = FVector::DotProduct(DirectionToTarget, SourceForward);
+		const float Angle = FMath::Acos(DotProduct);
+		const float MaxAngle = FMath::DegreesToRadians(FOV / 2.0f);
+		if (Angle > MaxAngle)
+		{
+			continue;
+		}
+
+		FHitResult HitResult;
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(SourceComponent->GetBodyActor());
+		const UWorld* World = TargetActor->GetWorld();
+		const bool bHit = World->LineTraceSingleByChannel(
+			HitResult,
+			SourceTransform.GetLocation(),
+			VisibilityPointLocation,
+			ECC_Visibility,
+			QueryParams);
+		if (bHit && HitResult.GetActor() != TargetActor)
+		{
+			continue;
+		}
+
+		return true;
 	}
 
-	const FVector DirectionToTarget = (TargetLocation - SourceTransform.GetLocation()).GetSafeNormal();
-	const FVector ListenerForward = SourceTransform.GetRotation().Vector();
-	const float DotProduct = FVector::DotProduct(DirectionToTarget, ListenerForward);
-	const float Angle = FMath::Acos(DotProduct);
-	const float MaxAngle = FMath::DegreesToRadians(FOV / 2.0f);
-	if (Angle > MaxAngle)
-	{
-		return false;
-	}
-
-	FHitResult HitResult;
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(SourceComponent->GetBodyActor());
-	const UWorld* World = TargetActor->GetWorld();
-	const bool bHit = World->LineTraceSingleByChannel(
-		HitResult,
-		SourceTransform.GetLocation(),
-		TargetLocation,
-		ECC_Visibility,
-		QueryParams);
-	if (bHit && HitResult.GetActor() != TargetActor)
-	{
-		return false;
-	}
-
-	return true;
+	return false;
 }
 
 void UAdvancedSightSystem::OnDebugDrawStateChanged(IConsoleVariable* ConsoleVariable)

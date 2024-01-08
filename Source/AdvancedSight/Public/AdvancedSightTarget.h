@@ -15,6 +15,7 @@ class UAdvancedSightTarget : public UInterface
 class ADVANCEDSIGHT_API IAdvancedSightTarget
 {
 	GENERATED_BODY()
-
 public:
+	UFUNCTION(BlueprintNativeEvent)
+	void GetVisibilityPoints(TArray<FVector>& OutVisibilityPoints) const;
 };
