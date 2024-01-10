@@ -64,6 +64,21 @@ float UAdvancedSightSystem::GetGainValueForTarget(const uint32 ListenerId, const
 	return Query->GainValue;
 }
 
+FVector UAdvancedSightSystem::GetLastKnownLocationFor(const uint32 ListenerId, const uint32 TargetId) const
+{
+	const FAdvancedSightQuery* Query = Queries.FindByPredicate([ListenerId, TargetId](const FAdvancedSightQuery& Query)
+	{
+		return Query.ListenerId == ListenerId && Query.TargetId == TargetId;
+	});
+
+	if (!Query)
+	{
+		return FVector::ZeroVector;
+	}
+
+	return Query->LastSeenLocation;
+}
+
 void UAdvancedSightSystem::PostInitProperties()
 {
 	Super::PostInitProperties();
@@ -371,10 +386,14 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 	}
 
 	const TArray<AActor*>& RememberedTargets = SightComponent->GetRememberedTargets();
+	const auto* SightSystem = World->GetSubsystem<UAdvancedSightSystem>();
 	for (const AActor* RememberedTarget : RememberedTargets)
 	{
+		const FVector LastKnownLocation =
+			SightSystem->GetLastKnownLocationFor(SightComponent->GetUniqueID(), RememberedTarget->GetUniqueID());
 		const FVector TargetLocation = RememberedTarget->GetActorLocation();
-		DrawDebugLine(World, CenterLocation, TargetLocation, FColor::Yellow);
-		DrawDebugSphere(World, TargetLocation, 32.0f, 12, FColor::Yellow);
+		DrawDebugLine(World, CenterLocation, LastKnownLocation, FColor::Yellow);
+		DrawDebugSphere(World, LastKnownLocation, 32.0f, 12, FColor::Yellow);
+		DrawDebugSphere(World, TargetLocation, 32.0f, 12, FColor::Green);
 	}
 }

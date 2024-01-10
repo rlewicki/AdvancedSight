@@ -35,6 +35,7 @@ public:
 	void RegisterTarget(AActor* TargetActor);
 	void UnregisterTarget(AActor* TargetActor);
 	float GetGainValueForTarget(const uint32 Listener, const uint32 TargetId) const;
+	FVector GetLastKnownLocationFor(const uint32 ListenerId, const uint32 TargetId) const;
 
 	virtual void PostInitProperties() override;
 	virtual void Tick(float DeltaTime) override;
