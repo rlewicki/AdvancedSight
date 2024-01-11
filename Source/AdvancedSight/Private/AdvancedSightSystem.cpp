@@ -5,6 +5,7 @@
 #include "AdvancedSightComponent.h"
 #include "AdvancedSightData.h"
 #include "AdvancedSightTarget.h"
+#include "AdvancedSightTargetComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 static TAutoConsoleVariable<bool> ShouldDebugDraw(
@@ -255,7 +256,14 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 	const FTransform SourceTransform = SourceComponent->GetEyePointOfViewTransform();
 	const FVector SourceForward = SourceTransform.GetRotation().Vector();
 	TArray<FVector> VisibilityPoints;
-	IAdvancedSightTarget::Execute_GetVisibilityPoints(TargetActor, VisibilityPoints);
+	if (const auto* TargetSightComponent = TargetActor->FindComponentByClass<UAdvancedSightTargetComponent>())
+	{
+		TargetSightComponent->GetVisibilityPoints(VisibilityPoints);
+	}
+	else
+	{
+		VisibilityPoints.Add(TargetActor->GetActorLocation());
+	}
 	for (const FVector& VisibilityPointLocation : VisibilityPoints)
 	{
 		const float DistanceSq = FVector::DistSquared(SourceTransform.GetLocation(), VisibilityPointLocation);
