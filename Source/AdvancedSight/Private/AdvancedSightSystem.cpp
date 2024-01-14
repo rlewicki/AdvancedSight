@@ -108,15 +108,15 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		return;
 	}
 
-	for (FAdvancedSightQuery& Query : Queries)
+	ParallelFor(Queries.Num(), [this](int32 Index)
 	{
-		UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
-		AActor* TargetActor = TargetActors[Query.TargetId].Get();
-		bool bIsVisible = false;
-		float GainMultiplier = 0.0f;
+		FAdvancedSightQuery& Query = Queries[Index];
+		const UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
+		const AActor* TargetActor = TargetActors[Query.TargetId].Get();
+		Query.bIsCurrentCheckSuccess = false;
 		if (Query.bIsTargetPerceived)
 		{
-			bIsVisible = IsVisibleInsideCone(SightComponent, TargetActor, Query.LoseSightRadius, 360.0f);
+			Query.bIsCurrentCheckSuccess = IsVisibleInsideCone(SightComponent, TargetActor, Query.LoseSightRadius, 360.0f);
 		}
 		else
 		{
@@ -129,15 +129,20 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 					IsVisibleInsideCone(SightComponent, TargetActor, Radius, SightInfo.FOV);
 				if (bIsVisibleInsideCone)
 				{
-					bIsVisible = true;
-					GainMultiplier = SightInfo.GainMultiplier;
+					Query.bIsCurrentCheckSuccess = true;
+					Query.CurrentGainMultiplier = SightInfo.GainMultiplier;
 					break;
 				}
 			}	
 		}
-		
+	},
+	false);
 
-		if (bIsVisible)
+	for (FAdvancedSightQuery& Query : Queries)
+	{
+		UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
+		AActor* TargetActor = TargetActors[Query.TargetId].Get();
+		if (Query.bIsCurrentCheckSuccess)
 		{
 			if (!Query.bWasLastCheckSuccess)
 			{
@@ -148,7 +153,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 			Query.LastSeenLocation = TargetActor->GetActorLocation();
 			if (!Query.bIsTargetPerceived)
 			{
-				Query.GainValue += DeltaTime * GainMultiplier;
+				Query.GainValue += DeltaTime * Query.CurrentGainMultiplier;
 				if (Query.GainValue > 1.0f)
 				{
 					Query.bIsTargetPerceived = true;

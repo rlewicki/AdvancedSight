@@ -16,11 +16,13 @@ struct FAdvancedSightQuery
 	uint32 ListenerId = UINT32_MAX;
 	uint32 TargetId = UINT32_MAX;
 	FVector LastSeenLocation;
-	bool bWasLastCheckSuccess = false;
-	bool bIsTargetPerceived = false;
+	int32 bWasLastCheckSuccess : 1;
+	int32 bIsCurrentCheckSuccess : 1;
+	int32 bIsTargetPerceived : 1;
 	float LoseSightTimer = 0.0f;
 	float LoseSightCooldown = 1.0f;
 	float GainValue = 0.0f;
+	float CurrentGainMultiplier = 1.0f;
 	float LoseSightRadius = -1.0f;
 	TArray<FAdvancedSightInfo> SightInfos;
 };
