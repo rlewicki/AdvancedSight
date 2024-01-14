@@ -197,7 +197,7 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 
 TStatId UAdvancedSightSystem::GetStatId() const
 {
-	return TStatId();
+	RETURN_QUICK_DECLARE_CYCLE_STAT(UAdvancedSightSystem, STATGROUP_Tickables);
 }
 
 void UAdvancedSightSystem::HandleNewActorSpawned(AActor* Actor)
