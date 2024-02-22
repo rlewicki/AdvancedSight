@@ -4,6 +4,7 @@
 
 #include "AdvancedSightComponent.h"
 #include "AdvancedSightData.h"
+#include "AdvancedSightSettings.h"
 #include "AdvancedSightTarget.h"
 #include "AdvancedSightTargetComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -109,7 +110,8 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		return;
 	}
 
-	ParallelFor(Queries.Num(), [this](int32 Index)
+	const ECollisionChannel SightCollisionChannel = GetDefault<UAdvancedSightSettings>()->AdvancedSightCollisionChannel;
+	ParallelFor(Queries.Num(), [this, SightCollisionChannel](int32 Index)
 	{
 		FAdvancedSightQuery& Query = Queries[Index];
 		const UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
@@ -119,7 +121,12 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		if (Query.bIsTargetPerceived)
 		{
 			Query.bIsCurrentCheckSuccess = IsVisibleInsideCone(
-				SightComponent, TargetActor, Query.LoseSightRadius, 360.0f, Query.bTargetVisibilityPointsFlag);
+				SightComponent,
+				TargetActor,
+				Query.LoseSightRadius,
+				360.0f,
+				SightCollisionChannel,
+				Query.bTargetVisibilityPointsFlag);
 		}
 		else
 		{
@@ -129,7 +136,12 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 				const float Radius =
 					Query.bWasLastCheckSuccess ? SightInfo.GainRadius + EPSILON : SightInfo.GainRadius;
 				const bool bIsVisibleInsideCone = IsVisibleInsideCone(
-					SightComponent, TargetActor, Radius, SightInfo.FOV, Query.bTargetVisibilityPointsFlag);
+					SightComponent,
+					TargetActor,
+					Radius,
+					SightInfo.FOV,
+					SightCollisionChannel,
+					Query.bTargetVisibilityPointsFlag);
 				if (bIsVisibleInsideCone)
 				{
 					Query.bIsCurrentCheckSuccess = true;
@@ -259,6 +271,7 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 	const AActor* TargetActor,
 	const float Radius,
 	const float FOV,
+	ECollisionChannel CollisionChannel,
 	int32& VisibilityPointsFlags)
 {
 	const float CheckRadiusSq = FMath::Square(Radius);
@@ -292,7 +305,7 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 			HitResult,
 			SourceTransform.GetLocation(),
 			VisibilityPoints[Index],
-			ECC_Visibility,
+			CollisionChannel,
 			QueryParams);
 		if (bHit && HitResult.GetActor() != TargetActor)
 		{

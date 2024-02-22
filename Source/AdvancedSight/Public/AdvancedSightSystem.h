@@ -52,6 +52,7 @@ protected:
 		const AActor* TargetActor,
 		const float Radius,
 		const float FOV,
+		ECollisionChannel CollisionChannel,
 		int32& VisibilityPointsFlags);
 	static void SetPointVisible(int32& Flags, int32 PointIndex, bool bIsVisible);
 	static bool IsPointVisible(int32 Flags, int32 PointIndex);

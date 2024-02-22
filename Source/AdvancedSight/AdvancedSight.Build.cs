@@ -27,6 +27,7 @@ public class AdvancedSight : ModuleRules
 				"Slate",
 				"SlateCore",
 				"AIModule",
+				"DeveloperSettings",
 			}
 		);
 	}
