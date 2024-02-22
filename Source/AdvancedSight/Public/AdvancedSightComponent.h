@@ -21,9 +21,16 @@ public:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	UFUNCTION(BlueprintPure)
 	UAdvancedSightData* GetSightData() const;
+
+	UFUNCTION(BlueprintPure)
 	FTransform GetEyePointOfViewTransform() const;
+
+	UFUNCTION(BlueprintPure)
 	AActor* GetBodyActor() const;
+
+	UFUNCTION(BlueprintPure)
 	bool IsTargetPerceived(const AActor* TargetActor) const;
 
 	UFUNCTION(BlueprintPure)
