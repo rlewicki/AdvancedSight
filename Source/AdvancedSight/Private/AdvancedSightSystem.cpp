@@ -428,6 +428,7 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 	const FTransform LoseSightTransform(FQuat(FRotator(90.0, 0.0, 0.0)), CenterLocation);
 	DrawDebugCircle(World, LoseSightTransform.ToMatrixNoScale(), SightData->LoseSightRadius, 24, FColor::Black);
 
+	const FDebugDrawInfo& DebugDrawInfo = GetDefault<UAdvancedSightSettings>()->DebugDrawInfo;
 	const TArray<AActor*>& PerceivedTargets = SightComponent->GetPerceivedTargets();
 	for (const AActor* PerceivedTarget : PerceivedTargets)
 	{
@@ -450,13 +451,24 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 			const bool bIsPointVisible = IsPointVisible(Query->bTargetVisibilityPointsFlag, Index);
 			if (bIsPointVisible)
 			{
-				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Green);
-				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Green);
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], DebugDrawInfo.PerceivedTarget_VisibleColor);
+				DrawDebugSphere(
+					World,
+					VisibilityPoints[Index],
+					DebugDrawInfo.VisibilityPointRadius,
+					DebugDrawInfo.VisibilityPointSphereSegments,
+					DebugDrawInfo.PerceivedTarget_VisibleColor);
 			}
 			else
 			{
-				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Red);
-				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Red);
+				DrawDebugLine(
+					World, CenterLocation, VisibilityPoints[Index], DebugDrawInfo.PerceivedTarget_UnconfirmedColor);
+				DrawDebugSphere(
+					World,
+					VisibilityPoints[Index],
+					DebugDrawInfo.VisibilityPointRadius,
+					DebugDrawInfo.VisibilityPointSphereSegments,
+					DebugDrawInfo.PerceivedTarget_UnconfirmedColor);
 			}
 		}
 	}
@@ -482,13 +494,23 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 			const bool bIsPointVisible = IsPointVisible(Query->bTargetVisibilityPointsFlag, Index);
 			if (bIsPointVisible)
 			{
-				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Turquoise);
-				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Turquoise);		
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], DebugDrawInfo.SpottedTarget_VisibleColor);
+				DrawDebugSphere(
+					World,
+					VisibilityPoints[Index],
+					DebugDrawInfo.VisibilityPointRadius,
+					DebugDrawInfo.VisibilityPointSphereSegments,
+					DebugDrawInfo.SpottedTarget_VisibleColor);		
 			}
 			else
 			{
-				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Blue);
-				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Blue);
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], DebugDrawInfo.SpottedTarget_UnconfirmedColor);
+				DrawDebugSphere(
+					World,
+					VisibilityPoints[Index],
+					DebugDrawInfo.VisibilityPointRadius,
+					DebugDrawInfo.VisibilityPointSphereSegments,
+					DebugDrawInfo.SpottedTarget_UnconfirmedColor);
 			}
 		}
 	}
@@ -500,12 +522,22 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 		const FVector LastKnownLocation =
 			SightSystem->GetLastKnownLocationFor(SightComponent->GetUniqueID(), RememberedTarget->GetUniqueID());
 		DrawDebugLine(World, CenterLocation, LastKnownLocation, FColor::Yellow);
-		DrawDebugSphere(World, LastKnownLocation, 32.0f, 12, FColor::Yellow);
+		DrawDebugSphere(
+			World,
+			LastKnownLocation,
+			DebugDrawInfo.VisibilityPointRadius,
+			DebugDrawInfo.VisibilityPointSphereSegments,
+			DebugDrawInfo.LastKnownLocationColor);
 		TArray<FVector> VisibilityPoints;
 		GetVisibilityPointsForActor(RememberedTarget, VisibilityPoints);
 		for (const FVector& VisibilityPoint : VisibilityPoints)
 		{
-			DrawDebugSphere(World, VisibilityPoint, 32.0f, 12, FColor::Red);
+			DrawDebugSphere(
+				World,
+				VisibilityPoint,
+				DebugDrawInfo.VisibilityPointRadius,
+				DebugDrawInfo.VisibilityPointSphereSegments,
+				DebugDrawInfo.NotPerceivedColor);
 		}
 	}
 }
