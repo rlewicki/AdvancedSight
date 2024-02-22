@@ -8,7 +8,7 @@
 #include "AdvancedSightTargetComponent.h"
 #include "Kismet/GameplayStatics.h"
 
-static TAutoConsoleVariable<bool> ShouldDebugDraw(
+static TAutoConsoleVariable<bool> CVarShouldDebugDraw(
 	TEXT("AdvancedSight.ShouldDebugDraw"), false, TEXT("Set this to true to see the closest listener debug drawing"));
 
 void UAdvancedSightSystem::RegisterListener(UAdvancedSightComponent* SightComponent)
@@ -91,7 +91,7 @@ void UAdvancedSightSystem::PostInitProperties()
 			FOnActorSpawned::FDelegate::CreateUObject(this, &ThisClass::HandleNewActorSpawned);
 		NewActorSpawnedDelegateHandle = World->AddOnActorSpawnedHandler(ActorSpawnedDelegate);
 
-		ShouldDebugDraw.AsVariable()->SetOnChangedCallback(
+		CVarShouldDebugDraw.AsVariable()->SetOnChangedCallback(
 			FConsoleVariableDelegate::CreateUObject(this, &ThisClass::OnDebugDrawStateChanged));
 	}
 }
