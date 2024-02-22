@@ -18,10 +18,7 @@ class ADVANCEDSIGHT_API UAdvancedSightComponent : public UActorComponent
 
 public:
 	UAdvancedSightComponent();
-	virtual void TickComponent(
-		float DeltaTime,
-		ELevelTick TickType,
-		FActorComponentTickFunction* ThisTickFunction) override;
+	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UAdvancedSightData* GetSightData() const;
@@ -58,8 +55,6 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FAdvancedSightComponentDelegate OnTargetForgot;
 protected:
-	virtual void BeginPlay() override;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TObjectPtr<UAdvancedSightData> SightData;
 

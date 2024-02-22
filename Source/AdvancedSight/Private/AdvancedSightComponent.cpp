@@ -7,7 +7,7 @@
 
 UAdvancedSightComponent::UAdvancedSightComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 }
 
 FTransform UAdvancedSightComponent::GetEyePointOfViewTransform() const
