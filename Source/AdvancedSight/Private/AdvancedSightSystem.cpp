@@ -93,6 +93,7 @@ void UAdvancedSightSystem::PostInitProperties()
 
 		CVarShouldDebugDraw.AsVariable()->SetOnChangedCallback(
 			FConsoleVariableDelegate::CreateUObject(this, &ThisClass::OnDebugDrawStateChanged));
+		bShouldDebugDraw = CVarShouldDebugDraw.GetValueOnGameThread();
 	}
 }
 
