@@ -126,11 +126,3 @@ UAdvancedSightData* UAdvancedSightComponent::GetSightData() const
 {
 	return SightData;
 }
-
-void UAdvancedSightComponent::TickComponent(
-	float DeltaTime,
-	ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-}
