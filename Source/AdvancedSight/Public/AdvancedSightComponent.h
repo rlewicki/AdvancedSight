@@ -11,7 +11,7 @@ class UAdvancedSightData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAdvancedSightComponentDelegate, AActor*, TargetActor);
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+UCLASS(ClassGroup=(AI), meta=(BlueprintSpawnableComponent))
 class ADVANCEDSIGHT_API UAdvancedSightComponent : public UActorComponent
 {
 	GENERATED_BODY()
