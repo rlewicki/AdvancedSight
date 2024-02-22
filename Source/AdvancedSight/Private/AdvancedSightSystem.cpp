@@ -115,9 +115,11 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 		const UAdvancedSightComponent* SightComponent = Listeners[Query.ListenerId].Get();
 		const AActor* TargetActor = TargetActors[Query.TargetId].Get();
 		Query.bIsCurrentCheckSuccess = false;
+		ResetPointsVisibility(Query.bTargetVisibilityPointsFlag);
 		if (Query.bIsTargetPerceived)
 		{
-			Query.bIsCurrentCheckSuccess = IsVisibleInsideCone(SightComponent, TargetActor, Query.LoseSightRadius, 360.0f);
+			Query.bIsCurrentCheckSuccess = IsVisibleInsideCone(
+				SightComponent, TargetActor, Query.LoseSightRadius, 360.0f, Query.bTargetVisibilityPointsFlag);
 		}
 		else
 		{
@@ -126,8 +128,8 @@ void UAdvancedSightSystem::Tick(float DeltaTime)
 				constexpr float EPSILON = 1.0f;
 				const float Radius =
 					Query.bWasLastCheckSuccess ? SightInfo.GainRadius + EPSILON : SightInfo.GainRadius;
-				const bool bIsVisibleInsideCone =
-					IsVisibleInsideCone(SightComponent, TargetActor, Radius, SightInfo.FOV);
+				const bool bIsVisibleInsideCone = IsVisibleInsideCone(
+					SightComponent, TargetActor, Radius, SightInfo.FOV, Query.bTargetVisibilityPointsFlag);
 				if (bIsVisibleInsideCone)
 				{
 					Query.bIsCurrentCheckSuccess = true;
@@ -256,29 +258,25 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 	const UAdvancedSightComponent* SourceComponent,
 	const AActor* TargetActor,
 	const float Radius,
-	const float FOV)
+	const float FOV,
+	int32& VisibilityPointsFlags)
 {
 	const float CheckRadiusSq = FMath::Square(Radius);
 	const FTransform SourceTransform = SourceComponent->GetEyePointOfViewTransform();
 	const FVector SourceForward = SourceTransform.GetRotation().Vector();
 	TArray<FVector> VisibilityPoints;
-	if (const auto* TargetSightComponent = TargetActor->FindComponentByClass<UAdvancedSightTargetComponent>())
+	GetVisibilityPointsForActor(TargetActor, VisibilityPoints);
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(SourceComponent->GetBodyActor());
+	for (int32 Index = 0; Index < VisibilityPoints.Num(); Index++)
 	{
-		TargetSightComponent->GetVisibilityPoints(VisibilityPoints);
-	}
-	else
-	{
-		VisibilityPoints.Add(TargetActor->GetActorLocation());
-	}
-	for (const FVector& VisibilityPointLocation : VisibilityPoints)
-	{
-		const float DistanceSq = FVector::DistSquared(SourceTransform.GetLocation(), VisibilityPointLocation);
+		const float DistanceSq = FVector::DistSquared(SourceTransform.GetLocation(), VisibilityPoints[Index]);
 		if (DistanceSq > CheckRadiusSq)
 		{
 			continue;
 		}
 
-		const FVector DirectionToTarget = (VisibilityPointLocation - SourceTransform.GetLocation()).GetSafeNormal();
+		const FVector DirectionToTarget = (VisibilityPoints[Index] - SourceTransform.GetLocation()).GetSafeNormal();
 		const float DotProduct = FVector::DotProduct(DirectionToTarget, SourceForward);
 		const float Angle = FMath::Acos(DotProduct);
 		const float MaxAngle = FMath::DegreesToRadians(FOV / 2.0f);
@@ -288,13 +286,12 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 		}
 
 		FHitResult HitResult;
-		FCollisionQueryParams QueryParams;
-		QueryParams.AddIgnoredActor(SourceComponent->GetBodyActor());
 		const UWorld* World = TargetActor->GetWorld();
+		check(World);
 		const bool bHit = World->LineTraceSingleByChannel(
 			HitResult,
 			SourceTransform.GetLocation(),
-			VisibilityPointLocation,
+			VisibilityPoints[Index],
 			ECC_Visibility,
 			QueryParams);
 		if (bHit && HitResult.GetActor() != TargetActor)
@@ -302,10 +299,45 @@ bool UAdvancedSightSystem::IsVisibleInsideCone(
 			continue;
 		}
 
+		SetPointVisible(VisibilityPointsFlags, Index, true);
 		return true;
 	}
 
 	return false;
+}
+
+void UAdvancedSightSystem::SetPointVisible(int32& Flags, int32 PointIndex, bool bIsVisible)
+{
+	if (bIsVisible)
+	{
+		Flags |= (1 << PointIndex);
+	}
+	else
+	{
+		Flags &= ~(1 << PointIndex);
+	}
+}
+
+bool UAdvancedSightSystem::IsPointVisible(int32 Flags, int32 PointIndex)
+{
+	return (Flags >> PointIndex) & 1;
+}
+
+void UAdvancedSightSystem::ResetPointsVisibility(int32& Flags)
+{
+	Flags = 0;
+}
+
+void UAdvancedSightSystem::GetVisibilityPointsForActor(const AActor* Actor, TArray<FVector>& OutVisibilityPoints)
+{
+	if (const auto* TargetComponent = Actor->FindComponentByClass<UAdvancedSightTargetComponent>())
+	{
+		TargetComponent->GetVisibilityPoints(OutVisibilityPoints);
+	}
+	else
+	{
+		OutVisibilityPoints.Add(Actor->GetActorLocation());
+	}
 }
 
 void UAdvancedSightSystem::OnDebugDrawStateChanged(IConsoleVariable* ConsoleVariable)
@@ -386,17 +418,66 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 	const TArray<AActor*>& PerceivedTargets = SightComponent->GetPerceivedTargets();
 	for (const AActor* PerceivedTarget : PerceivedTargets)
 	{
-		const FVector TargetLocation = PerceivedTarget->GetActorLocation();
-		DrawDebugLine(World, CenterLocation, TargetLocation, FColor::Green);
-		DrawDebugSphere(World, TargetLocation, 32.0f, 12, FColor::Green);
+		TArray<FVector> VisibilityPoints;
+		GetVisibilityPointsForActor(PerceivedTarget, VisibilityPoints);
+
+		const uint32 ListenerId = SightComponent->GetUniqueID();
+		const uint32 TargetId = PerceivedTarget->GetUniqueID();
+		const FAdvancedSightQuery* Query = Queries.FindByPredicate([ListenerId, TargetId](const FAdvancedSightQuery& Query)
+		{
+			return Query.ListenerId == ListenerId && Query.TargetId == TargetId;
+		});
+		if (!ensure(Query))
+		{
+			continue;
+		}
+
+		for (int32 Index = 0; Index < VisibilityPoints.Num(); Index++)
+		{
+			const bool bIsPointVisible = IsPointVisible(Query->bTargetVisibilityPointsFlag, Index);
+			if (bIsPointVisible)
+			{
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Green);
+				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Green);
+			}
+			else
+			{
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Red);
+				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Red);
+			}
+		}
 	}
 
 	const TArray<AActor*>& SpottedTargets = SightComponent->GetSpottedTargets();
 	for (const AActor* SpottedTarget : SpottedTargets)
 	{
-		const FVector TargetLocation = SpottedTarget->GetActorLocation();
-		DrawDebugLine(World, CenterLocation, TargetLocation, FColor::Blue);
-		DrawDebugSphere(World, TargetLocation, 32.0f, 12, FColor::Blue);
+		TArray<FVector> VisibilityPoints;
+		GetVisibilityPointsForActor(SpottedTarget, VisibilityPoints);
+		const uint32 ListenerId = SightComponent->GetUniqueID();
+		const uint32 TargetId = SpottedTarget->GetUniqueID();
+		const FAdvancedSightQuery* Query = Queries.FindByPredicate([ListenerId, TargetId](const FAdvancedSightQuery& Query)
+		{
+			return Query.ListenerId == ListenerId && Query.TargetId == TargetId;
+		});
+		if (!ensure(Query))
+		{
+			continue;
+		}
+		
+		for (int32 Index = 0; Index < VisibilityPoints.Num(); Index++)
+		{
+			const bool bIsPointVisible = IsPointVisible(Query->bTargetVisibilityPointsFlag, Index);
+			if (bIsPointVisible)
+			{
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Turquoise);
+				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Turquoise);		
+			}
+			else
+			{
+				DrawDebugLine(World, CenterLocation, VisibilityPoints[Index], FColor::Blue);
+				DrawDebugSphere(World, VisibilityPoints[Index], 32.0f, 12, FColor::Blue);
+			}
+		}
 	}
 
 	const TArray<AActor*>& RememberedTargets = SightComponent->GetRememberedTargets();
@@ -405,9 +486,13 @@ void UAdvancedSightSystem::DrawDebug(const UAdvancedSightComponent* SightCompone
 	{
 		const FVector LastKnownLocation =
 			SightSystem->GetLastKnownLocationFor(SightComponent->GetUniqueID(), RememberedTarget->GetUniqueID());
-		const FVector TargetLocation = RememberedTarget->GetActorLocation();
 		DrawDebugLine(World, CenterLocation, LastKnownLocation, FColor::Yellow);
 		DrawDebugSphere(World, LastKnownLocation, 32.0f, 12, FColor::Yellow);
-		DrawDebugSphere(World, TargetLocation, 32.0f, 12, FColor::Green);
+		TArray<FVector> VisibilityPoints;
+		GetVisibilityPointsForActor(RememberedTarget, VisibilityPoints);
+		for (const FVector& VisibilityPoint : VisibilityPoints)
+		{
+			DrawDebugSphere(World, VisibilityPoint, 32.0f, 12, FColor::Red);
+		}
 	}
 }

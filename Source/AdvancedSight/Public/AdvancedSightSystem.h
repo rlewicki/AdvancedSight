@@ -19,6 +19,7 @@ struct FAdvancedSightQuery
 	int32 bWasLastCheckSuccess : 1;
 	int32 bIsCurrentCheckSuccess : 1;
 	int32 bIsTargetPerceived : 1;
+	int32 bTargetVisibilityPointsFlag = 0;
 	float LoseSightTimer = 0.0f;
 	float LoseSightCooldown = 1.0f;
 	float GainValue = 0.0f;
@@ -50,7 +51,12 @@ protected:
 		const UAdvancedSightComponent* SourceComponent,
 		const AActor* TargetActor,
 		const float Radius,
-		const float FOV);
+		const float FOV,
+		int32& VisibilityPointsFlags);
+	static void SetPointVisible(int32& Flags, int32 PointIndex, bool bIsVisible);
+	static bool IsPointVisible(int32 Flags, int32 PointIndex);
+	static void ResetPointsVisibility(int32& Flags);
+	static void GetVisibilityPointsForActor(const AActor* Actor, TArray<FVector>& OutVisibilityPoints);
 
 	void OnDebugDrawStateChanged(IConsoleVariable* ConsoleVariable);
 
